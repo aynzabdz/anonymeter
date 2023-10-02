@@ -157,7 +157,7 @@ class KAnonymity():
                 towriterecords = [None for _ in range(len(self.records))]
                 with open(f"../../data/{filename.replace('.csv', '')}_{k}_anonymized.csv", 'w') as wf:
                     column_names = ATTNAME
-                    wf.write(', '.join(column_names))
+                    wf.write(','.join(column_names))
                     wf.write('\n')
                     for qi_sequence, recordidxs in qi_frequency.items():
                         if len(recordidxs) < k:
@@ -316,16 +316,16 @@ if __name__ == "__main__":
     print(f"Executing k-Anonymization on the dataset using a k-value of {k}.")
 
 
-    ATTNAME = ['age', 'workclass', 'fnlwgt', 'education', 'education_num', 'marital-status',
+    ATTNAME = ['age', 'type_employer', 'fnlwgt', 'education', 'education_num', 'marital',
            'occupation', 'relationship', 'race', 'sex', 
-            'capital-gain', 'capital-loss', 'hours-per-week', 'native-country', 'class']
+            'capital-gain', 'capital-loss', 'hours-per-week', 'country', 'income']
 
     AGECONFFILE = '../../conf/age_hierarchy.txt'
     EDUCONFFILE = '../../conf/edu_hierarchy.txt'
     MARITALCONFFILE = '../../conf/marital_hierarchy.txt'
     RACECONFFILE = '../../conf/race_hierarchy.txt'
 
-    quasi_identifiers=['age', 'education', 'marital-status', 'race']
+    quasi_identifiers=['age', 'education', 'marital', 'race']
 
     
     data = readdata(filepath, filename)
