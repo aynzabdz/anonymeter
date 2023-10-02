@@ -3,7 +3,7 @@ import os
 import pandas as pd
 
 
-def readdata(filepath='../../data', filename='adults_syn_ctgan.csv'):
+def readdata(filepath, filename):
     
     """
     Reads and processes records from the specified file.
@@ -155,7 +155,7 @@ class KAnonymity():
 
                 # used to make sure the output file keeps the same order with original data file
                 towriterecords = [None for _ in range(len(self.records))]
-                with open('../../data/adults_syn_%d_anonymized.csv' %k, 'w') as wf:
+                with open(f"../../data/{filename.replace('.csv', '')}_{k}_anonymized.csv", 'w') as wf:
                     column_names = ATTNAME
                     wf.write(', '.join(column_names))
                     wf.write('\n')
@@ -189,7 +189,7 @@ class KAnonymity():
                 print("Anonymization Completed!")
                 print(f"Precision of anonymization: {precision:.3f}")
                 print(f"Distoration of anonymization: {distoration:.3f}")
-                print(f"Anonymized dataset is saved at: '../../data/adults_syn_{k}_anonymized.csv'")
+                print(f"Anonymized dataset is saved at: '../../data/{filename.replace('.csv', '')}_{k}_anonymized.csv'")
 
                 break
 
@@ -306,8 +306,12 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description='Process some integers.')
     parser.add_argument('--K', type=int, default=2)
+    parser.add_argument('--filename', type=str, default='adults_syn_ctgan.csv')
+    parser.add_argument('--filepath', type=str, default='../../data')
     args = parser.parse_args()
     k = args.K
+    filename = args.filename
+    filepath = args.filepath
 
     print(f"Executing k-Anonymization on the dataset using a k-value of {k}.")
 
@@ -324,7 +328,7 @@ if __name__ == "__main__":
     quasi_identifiers=['age', 'education', 'marital-status', 'race']
 
     
-    data = readdata()
+    data = readdata(filepath, filename)
         
     KAnony = KAnonymity(data)
     KAnony.anonymize(quasi_identifiers, k)
