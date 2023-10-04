@@ -19,7 +19,6 @@ def readdata(filepath, filename):
     Prints an error message if the file cannot be opened or attributes cannot be converted to integers.
     """
     
-    
     records = []
     try:
         with open(os.path.join(filepath, filename), 'r') as rf:
@@ -30,7 +29,7 @@ def readdata(filepath, filename):
                     continue
                 line = [a.strip() for a in line.split(',')]
                 intidx = [ATTNAME.index(colname) for colname in (
-                    'age', 'fnlwgt', 'education_num', 'capital_gain', 'capital_loss', 'hr_per_week')]
+                    'age', 'fnlwgt', 'education_num', 'capital-gain', 'capital-loss', 'hours-per-week')]
                 for idx in intidx:
                     try:
                         line[idx] = int(line[idx])
@@ -43,7 +42,7 @@ def readdata(filepath, filename):
                 records.append(line)
         return records
     except:
-        print('cannot open file: %s%s' %(filepath, filename))
+        print('cannot open file: %s:%s' %(filepath, filename))
     
 
 def is_k_anonymous(df, quasi_identifiers, k):
@@ -74,7 +73,7 @@ class KAnonymity():
         self.records = records
         self.confile = [AGECONFFILE, EDUCONFFILE, MARITALCONFFILE, RACECONFFILE]
         
-    def anonymize(self, qi_names=['age', 'education', 'marital-status', 'race'], k=5):
+    def anonymize(self, k=5, qi_names=['age', 'education', 'marital', 'race']):
         """
         anonymizer for k-anonymity
         
@@ -158,7 +157,7 @@ class KAnonymity():
                 towriterecords = [None for _ in range(len(self.records))]
                 with open(f"../../data/{filename.replace('.csv', '')}_{k}_anonymized.csv", 'w') as wf:
                     column_names = ATTNAME
-                    wf.write(','.join(column_names))
+                    wf.write(', '.join(column_names))
                     wf.write('\n')
                     for qi_sequence, recordidxs in qi_frequency.items():
                         if len(recordidxs) < k:
@@ -308,7 +307,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process some integers.')
     parser.add_argument('--K', type=int, default=2)
     parser.add_argument('--filename', type=str, default='adults_syn_ctgan.csv')
-    parser.add_argument('--filepath', type=str, default='../../data/')
+    parser.add_argument('--filepath', type=str, default='../../data')
     args = parser.parse_args()
     k = args.K
     filename = args.filename
@@ -318,19 +317,17 @@ if __name__ == "__main__":
     print(f"Executing k-Anonymization on the dataset using a k-value of {k}.")
 
 
-    ATTNAME = ['age', 'type_employer', 'fnlwgt', 'education', 'education_num', 'marital',
+    ATTNAME = ['age', 'workclass', 'fnlwgt', 'education', 'education_num', 'marital',
            'occupation', 'relationship', 'race', 'sex', 
-            'capital_gain', 'capital_loss', 'hr_per_week', 'country', 'income']
+            'capital-gain', 'capital-loss', 'hours-per-week', 'native-country', 'class']
 
     AGECONFFILE = '../../conf/age_hierarchy.txt'
     EDUCONFFILE = '../../conf/education_hierarchy.txt'
     MARITALCONFFILE = '../../conf/marital_hierarchy.txt'
     RACECONFFILE = '../../conf/race_hierarchy.txt'
 
-    quasi_identifiers=['age', 'education', 'marital', 'race']
-
     
     data = readdata(filepath, filename)
         
     KAnony = KAnonymity(data)
-    KAnony.anonymize(quasi_identifiers, k)
+    KAnony.anonymize(k)
