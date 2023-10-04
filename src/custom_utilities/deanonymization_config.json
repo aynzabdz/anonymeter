@@ -1,0 +1,14 @@
+{
+  "data_path": "../../data",
+  "config_path": "../../conf",
+  "files": {
+    "original_data": "adults_train.csv",
+    "hierarchy_files": {
+      "age": "age_hierarchy.txt",
+      "education": "education_hierarchy.txt",
+      "marital": "marital_hierarchy.txt",
+      "race": "race_hierarchy.txt"
+    }
+  }
+}
+
