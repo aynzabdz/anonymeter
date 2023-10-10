@@ -29,7 +29,7 @@ def readdata(filepath, filename):
                     continue
                 line = [a.strip() for a in line.split(',')]
                 intidx = [ATTNAME.index(colname) for colname in (
-                    'age', 'fnlwgt', 'education_num', 'capital-gain', 'capital-loss', 'hours-per-week')]
+                    'age', 'fnlwgt', 'education_num', 'capital_gain', 'capital_loss', 'hr_per_week')]
                 for idx in intidx:
                     try:
                         line[idx] = int(line[idx])
@@ -157,7 +157,7 @@ class KAnonymity():
                 towriterecords = [None for _ in range(len(self.records))]
                 with open(f"../../data/{filename.replace('.csv', '')}_{k}_anonymized.csv", 'w') as wf:
                     column_names = ATTNAME
-                    wf.write(', '.join(column_names))
+                    wf.write(','.join(column_names))
                     wf.write('\n')
                     for qi_sequence, recordidxs in qi_frequency.items():
                         if len(recordidxs) < k:
@@ -172,7 +172,7 @@ class KAnonymity():
                                 if record[i] == '*' and i not in qiindex:
                                     record[i] = '?'
                             towriterecords[idx] = record[:]
-                            # wf.write(','.join(record))
+                            # wf.write(', '.join(record))
                             # wf.write('\n')
                         datasize += len(recordidxs)
                     for record in towriterecords:
@@ -317,9 +317,9 @@ if __name__ == "__main__":
     print(f"Executing k-Anonymization on the dataset using a k-value of {k}.")
 
 
-    ATTNAME = ['age', 'workclass', 'fnlwgt', 'education', 'education_num', 'marital',
+    ATTNAME = ['age', 'type_employer', 'fnlwgt', 'education', 'education_num', 'marital',
            'occupation', 'relationship', 'race', 'sex', 
-            'capital-gain', 'capital-loss', 'hours-per-week', 'native-country', 'class']
+            'capital_gain', 'capital_loss', 'hr_per_week', 'country', 'income']
 
     AGECONFFILE = '../../conf/age_hierarchy.txt'
     EDUCONFFILE = '../../conf/education_hierarchy.txt'
