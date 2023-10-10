@@ -172,12 +172,12 @@ class KAnonymity():
                                 if record[i] == '*' and i not in qiindex:
                                     record[i] = '?'
                             towriterecords[idx] = record[:]
-                            # wf.write(', '.join(record))
+                            # wf.write(','.join(record))
                             # wf.write('\n')
                         datasize += len(recordidxs)
                     for record in towriterecords:
                         if record is not None:
-                            wf.write(', '.join(record))
+                            wf.write(','.join(record))
                             wf.write('\n')
                         else:
                             wf.write('\n')
