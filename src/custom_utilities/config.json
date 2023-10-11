@@ -1,0 +1,6 @@
+{
+    "data_path": "../../data/",
+    "ori_file": "adults_train.csv",
+    "syn_file": "adults_syn_ctgan.csv"
+}
+
