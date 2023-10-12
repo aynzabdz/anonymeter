@@ -12,6 +12,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
+from sklearn.model_selection import GridSearchCV
 
 from de_anonymize import de_anonymize
 
@@ -97,36 +98,16 @@ def get_pipeline(X):
     clf = RandomForestClassifier(max_depth=30, min_samples_leaf=2, min_samples_split=2, n_estimators=50, random_state=42)
     return Pipeline([('transformer', transformer), ('classifier', clf)])
 
-def evaluate_model(model, X, y, dataset_name):
-    """
-    Evaluate the trained model on specified data and print evaluation metrics.
 
-    Args:
-        model (Pipeline): Trained scikit-learn pipeline.
-        X (pd.DataFrame): Features to predict on.
-        y (pd.Series): True labels.
-        dataset_name (str): Name of the dataset for display purposes.
 
-    Returns:
-        float: F1 score of the evaluated model.
+def compute_utility(anonymize=False, k=None):
     """
-    print(f"\n------- Evaluation on {dataset_name} -------")
-    y_proba = model.predict_proba(X)[:, 1]
-    y_pred = (y_proba > 0.5).astype(int)
-    print(f"Accuracy Score: {accuracy_score(y, y_pred)}")
-    f1 = f1_score(y, y_pred, average='weighted')
-    print(f"F1 Score: {f1}")
-    print(f"ROC AUC Score: {roc_auc_score(y, y_proba)}\n")
-    return f1
-
-def main(anonymize=False, k=None):
-    """
-    Main function to execute the entire pipeline: 
+    Compute utility by executing the pipeline: 
     - Load data
     - Optionally anonymize data
     - Prepare data
     - Train a model
-    - Evaluate model on both original and synthetic data
+    - Evaluate model on (anonymized) synthetic data
     """
     class Args:
         pass
@@ -134,8 +115,6 @@ def main(anonymize=False, k=None):
     args = Args()
     args.anonymize = anonymize
     args.k = k
-    
-    
     
     with open("config.json", "r") as f:
         config = json.load(f)
@@ -148,14 +127,60 @@ def main(anonymize=False, k=None):
     pipeline = get_pipeline(X_train)
     pipeline.fit(X_train, y_train)
 
-    f1_ori = evaluate_model(pipeline, X_test, y_test, "Original Data")
     y_syn = df_syn["income"].replace({'<=50K': 0, '>50K': 1})
     X_syn = df_syn.drop("income", axis=1)
-    f1_syn = evaluate_model(pipeline, X_syn, y_syn, "(Anonymized) Synthetic Data")
-    # evaluate_model(pipeline, X_train, y_train, "Train Data")
-    return f1_ori, f1_syn
+    y_proba_syn = pipeline.predict_proba(X_syn)[:, 1]
+    y_pred_syn = (y_proba_syn > 0.5).astype(int)
+    
+    accuracy_syn = accuracy_score(y_syn, y_pred_syn)
+    f1_syn = f1_score(y_syn, y_pred_syn, average='weighted')
+    roc_auc_syn = roc_auc_score(y_syn, y_proba_syn)
 
-from sklearn.model_selection import GridSearchCV
+    dataset_name = "Synthetic Data"
+    if args.anonymize:
+        dataset_name += f" ({args.k}{' ' if args.k is not None else ''}anonymized)"
+    
+    print(f"\n------------- {dataset_name} -------------")
+    
+    print(f"Accuracy on Synthetic Data: {accuracy_syn}")
+    print(f"F1 Score on Synthetic Data: {f1_syn}")
+    print(f"ROC AUC on Synthetic Data: {roc_auc_syn}")
+    
+    return accuracy_syn, f1_syn, roc_auc_syn
+
+
+
+def compute_test_utility():
+    """
+    Compute utility metrics for the test data.
+
+    Returns:
+        tuple: Tuple containing accuracy, F1 score, and ROC AUC score for test data.
+    """
+    
+    with open("config.json", "r") as f:
+        config = json.load(f)
+    
+    df_ori, _ = load_data(config)
+    X_train, X_test, y_train, y_test = prepare_data(df_ori)
+    pipeline = get_pipeline(X_train)
+    pipeline.fit(X_train, y_train)
+    
+    y_proba_test = pipeline.predict_proba(X_test)[:, 1]
+    y_pred_test = (y_proba_test > 0.5).astype(int)
+    
+    accuracy_test = accuracy_score(y_test, y_pred_test)
+    f1_test = f1_score(y_test, y_pred_test, average='weighted')
+    roc_auc_test = roc_auc_score(y_test, y_proba_test)
+    
+    print(f"\n------------- Test Data -------------")
+    print(f"\nAccuracy on Test Data: {accuracy_test}")
+    print(f"F1 Score on Test Data: {f1_test}")
+    print(f"ROC AUC on Test Data: {roc_auc_test}")
+    
+    return accuracy_test, f1_test, roc_auc_test
+
+
 
 def optimize_rf_params(data_path):
     """
@@ -178,6 +203,8 @@ def optimize_rf_params(data_path):
     df_ori = pd.read_csv(data_path)
     X_train, X_test, y_train, y_test = prepare_data(df_ori)
     pipeline = get_pipeline(X_train)
+    
+    print("performing grid search")
 
     # Define parameter grid to search
     param_grid = {
@@ -188,7 +215,7 @@ def optimize_rf_params(data_path):
     }
 
     # Initialize GridSearchCV
-    grid_search = GridSearchCV(pipeline, param_grid, cv=5, verbose=0, n_jobs=-1)
+    grid_search = GridSearchCV(pipeline, param_grid, cv=5, verbose=1, n_jobs=-1)
 
     # Conduct the grid search on the provided data
     grid_search.fit(X_train, y_train)
@@ -206,4 +233,4 @@ def optimize_rf_params(data_path):
 
 if __name__ == "__main__":
     args = parse_args()
-    main()
+    # accuracy, f1, roc_auc = compute_utility(args.anonymize, args.k)
