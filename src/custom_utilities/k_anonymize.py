@@ -3,22 +3,27 @@ import os
 import pandas as pd
 
 
-def readdata(filepath, filename):
-    
-    """
-    Reads and processes records from the specified file.
-    
-    Parameters:
-    filepath (str): Directory path to the file.
-    filename (str): Name of the file to read.
-    
+ATTNAME = [
+    'age', 'type_employer', 'fnlwgt', 'education', 'education_num', 'marital',
+    'occupation', 'relationship', 'race', 'sex',
+    'capital_gain', 'capital_loss', 'hr_per_week', 'country', 'income'
+]
+AGECONFFILE = '../../conf/age_hierarchy.txt'
+EDUCONFFILE = '../../conf/education_hierarchy.txt'
+MARITALCONFFILE = '../../conf/marital_hierarchy.txt'
+RACECONFFILE = '../../conf/race_hierarchy.txt'
+
+
+def read_data(filepath, filename):
+    """Read and process records from the specified file.
+
+    Args:
+        filepath (str): Directory path to the file.
+        filename (str): Name of the file to read.
+
     Returns:
-    list: A list of processed records, each represented as a list of attributes.
-    
-    Exceptions:
-    Prints an error message if the file cannot be opened or attributes cannot be converted to integers.
+        list: A list of processed records, each represented as a list of attributes.
     """
-    
     records = []
     try:
         with open(os.path.join(filepath, filename), 'r') as rf:
@@ -28,47 +33,61 @@ def readdata(filepath, filename):
                 if not line:
                     continue
                 line = [a.strip() for a in line.split(',')]
-                intidx = [ATTNAME.index(colname) for colname in (
+                int_indices = [ATTNAME.index(colname) for colname in (
                     'age', 'fnlwgt', 'education_num', 'capital_gain', 'capital_loss', 'hr_per_week')]
-                for idx in intidx:
+                for idx in int_indices:
                     try:
                         line[idx] = int(line[idx])
                     except:
-                        print('attribute %s, value %s, cannot be converted to number' %(ATTNAME[idx], line[idx]))
+                        print(f'attribute {ATTNAME[idx]}, value {line[idx]} cannot be converted to number')
                         line[idx] = -1
-                for idx in range(len(line)):
-                    if line[idx] == '' or line[idx] == '?':
-                        line[idx] = '*'
+                line = ['*' if item == '' or item == '?' else item for item in line]
                 records.append(line)
         return records
     except:
-        print('cannot open file: %s:%s' %(filepath, filename))
-    
+        print(f'cannot open file: {filepath}:{filename}')
+
 
 def is_k_anonymous(df, quasi_identifiers, k):
-    
-    """
-    Determines if a DataFrame is k-anonymous based on given quasi-identifiers.
-    
-    Parameters:
-    df (DataFrame): The DataFrame to be checked.
-    quasi_identifiers (list): A list of column names that are considered quasi-identifiers.
-    k (int): The desired level of anonymity.
-    
+    """Determine if a DataFrame is k-anonymous based on given quasi-identifiers.
+
+    Args:
+        df (DataFrame): The DataFrame to be checked.
+        quasi_identifiers (list): Columns considered as quasi-identifiers.
+        k (int): Desired level of anonymity.
+
     Returns:
-    bool: Returns True if the DataFrame is k-anonymous based on the quasi-identifiers and k, otherwise False.
+        bool: True if the DataFrame is k-anonymous, else False.
     """
-    
     groups = df.groupby(quasi_identifiers).size().reset_index(name='counts')
+    return groups['counts'].min() >= k
+
+
+class Tree:
+    """Tree class built for Domain Generalization Hierarchy (DGH) tree."""
     
-    if groups['counts'].min() < k:
-        return False
+    def __init__(self, conf_file):
+        self.conf_file = conf_file
+        self.root = dict()
+        self.level = -1
+        self.highest_gen = ''
+        self._build_tree()
+
+    def _build_tree(self):
+        with open(self.conf_file, 'r') as rf:
+            for line in rf:
+                line = line.strip().split(',')
+                height = len(line) - 1
+                self.level = height if self.level == -1 else self.level
+                self.highest_gen = line[-1] if not self.highest_gen else self.highest_gen
+                parent = None
+                for idx, val in enumerate(reversed(line)):
+                    self.root[val] = (parent, height - idx)
+                    parent = val
+
+
+class KAnonymity:
     
-    return True
-
-
-
-class KAnonymity():
     def __init__(self, records):
         self.records = records
         self.confile = [AGECONFFILE, EDUCONFFILE, MARITALCONFFILE, RACECONFFILE]
@@ -152,6 +171,24 @@ class KAnonymity():
                 dgh_att = [generalize_tree[name].level for name in qi_names]
                 datasize = 0
                 qiindex = [ATTNAME.index(name) for name in qi_names]
+                
+                
+                df_records = pd.DataFrame(self.records, columns=ATTNAME)
+
+                for qi_sequence, recordidxs in qi_frequency.items():
+                    if len(recordidxs) < k:
+                        continue
+
+                    # Filter records for this specific group
+                    group_df = df_records.iloc[list(recordidxs)]
+
+                    # Calculate mode for each QI in this group
+                    modes = group_df[qi_names].mode().iloc[0]
+
+                    for idx in recordidxs:
+                        for qi in qi_names:
+                            df_records.at[idx, qi] = modes[qi]
+
 
                 # used to make sure the output file keeps the same order with original data file
                 towriterecords = [None for _ in range(len(self.records))]
@@ -162,28 +199,30 @@ class KAnonymity():
                     for qi_sequence, recordidxs in qi_frequency.items():
                         if len(recordidxs) < k:
                             continue
+
+                        # Filter records for this specific group
+                        group_df = df_records.iloc[list(recordidxs)]
+
+                        # Calculate mode for each QI in this group
+                        modes = group_df.mode().iloc[0]  # <-- Here we calculate mode for ALL columns
+
                         for idx in recordidxs:
-                            record = self.records[idx][:]
-                            for i in range(len(qiindex)):
-                                record[qiindex[i]] = qi_sequence[i]
-                                genlvl_att[i] += generalize_tree[qi_names[i]].root[qi_sequence[i]][1]
-                            record = list(map(str, record))
-                            for i in range(len(record)):
-                                if record[i] == '*' and i not in qiindex:
-                                    record[i] = '?'
+                            for col in df_records.columns:  # <-- Here we update ALL columns with mode values
+                                df_records.at[idx, col] = modes[col]
+
+                        # Save updated records
+                        for idx in recordidxs:
+                            record = list(df_records.iloc[idx])
                             towriterecords[idx] = record[:]
-                            # wf.write(', '.join(record))
-                            # wf.write('\n')
-                        datasize += len(recordidxs)
+
                     for record in towriterecords:
                         if record is not None:
-                            wf.write(','.join(record))
+                            wf.write(','.join(map(str, record)))
                             wf.write('\n')
                         else:
                             wf.write('\n')
                 
                 print('Quasi Identifiers: ', qi_names)
-                # precision = self.calc_precission(genlvl_att, dgh_att, datasize, len(qi_names))
                 precision = self.calc_precision(genlvl_att, dgh_att, len(self.records), len(qi_names))
                 distoration = self.calc_distoration([gen_levels[qi_names[i]] for i in range(len(qi_names))], dgh_att, len(qi_names))
                 print("Anonymization Completed!")
@@ -260,74 +299,19 @@ class KAnonymity():
                 seq.append(record[idx])
         return tuple(seq)
 
-            
-
-        
-class Tree:
-    """
-    Tree class
-    built for DGH tree, keep track of each node's parent, and current level
-    """
-
-    def __init__(self, confile):
-        self.confile = confile
-        self.root = dict()
-        self.level = -1
-        self.highestgen = ''
-        self.buildTree()
-        
-    
-    def buildTree(self):
-        """
-        build the DGH tree from config file
-        """
-
-        with open(self.confile, 'r') as rf:
-            for line in rf:
-                line = line.strip()
-                if not line:
-                    continue
-                line = [col.strip() for col in line.split(',')]
-                height = len(line)-1
-                if self.level == -1:
-                    self.level = height
-                if not self.highestgen:
-                    self.highestgen = line[-1]
-                pre = None
-                for idx, val in enumerate(line[::-1]):
-                    self.root[val] = (pre, height-idx)
-                    pre = val
-                
-
-
-
 if __name__ == "__main__":
-    
-    
-    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser = argparse.ArgumentParser(description='K-Anonymization Process.')
     parser.add_argument('--K', type=int, default=2)
     parser.add_argument('--filename', type=str, default='adults_syn_ctgan.csv')
     parser.add_argument('--filepath', type=str, default='../../data')
     args = parser.parse_args()
-    k = args.K
+    
+
     filename = args.filename
     filepath = args.filepath
-    
 
-    print(f"Executing k-Anonymization on the dataset using a k-value of {k}.")
+    print(f"Executing k-Anonymization on the dataset using a k-value of {args.K}.")
 
-
-    ATTNAME = ['age', 'type_employer', 'fnlwgt', 'education', 'education_num', 'marital',
-           'occupation', 'relationship', 'race', 'sex', 
-            'capital_gain', 'capital_loss', 'hr_per_week', 'country', 'income']
-
-    AGECONFFILE = '../../conf/age_hierarchy.txt'
-    EDUCONFFILE = '../../conf/education_hierarchy.txt'
-    MARITALCONFFILE = '../../conf/marital_hierarchy.txt'
-    RACECONFFILE = '../../conf/race_hierarchy.txt'
-
-    
-    data = readdata(filepath, filename)
-        
-    KAnony = KAnonymity(data)
-    KAnony.anonymize(k)
+    data = read_data(filepath, filename)
+    kanonymizer = KAnonymity(data)
+    kanonymizer.anonymize(args.K)
