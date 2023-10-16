@@ -1,13 +1,36 @@
 # Anonymeter: Unified Framework for Quantifying Privacy Risk in Synthetic Data
 
-`Anonymeter` is a unified statistical framework to jointly quantify different
-types of privacy risks in synthetic tabular datasets. `Anonymeter` is equipped
-with attack-based evaluations for the **Singling Out**, **Linkability**, and
-**Inference** risks, which are the three key indicators of factual anonymization
-according to the [Article 29 Working Party](https://ec.europa.eu/justice/article-29/documentation/opinion-recommendation/files/2014/wp216_en.pdf).
+
+# Table of Contents
+
+- [Anonymeter: Unified Framework for Quantifying Privacy Risk in Synthetic Data](#anonymeter-unified-framework-for-quantifying-privacy-risk-in-synthetic-data)
+  - [How Anonymeter Works](#how-anonymeter-works)
+  - [Anonymeter in a Nutshell](#anonymeter-in-a-nutshell)
+- [Setup and Installation](#setup-and-installation)
+  - [Local Installation](#local-installation)
+- [Getting Started](#getting-started)
+- [Basic Usage Pattern](#basic-usage-pattern)
+- [Configuring Logging](#configuring-logging)
+- [Experiments for Assignment 2 of Data Protection Technologies](#experiments-for-assignment-2-of-data-protection-technologies)
+  - [Prerequisites](#prerequisites)
+  - [Installing Dependencies](#installing-dependencies)
+  - [Code Contributions](#code-contributions)
+  - [Reproducing Experiments](#reproducing-experiments)
+  - [K-Anonymization](#k-anonymization)
+  - [Deanonymization](#deanonymization)
+  - [Adding Noise](#adding-noise)
+  - [Computing Utility](#computing-utility)
+- [Thank You!](#thank-you)
 
 
-> Anonymeter has been positively reviewed by the technical experts from the [Commission Nationale de l’Informatique et des Libertés (CNIL)](https://www.cnil.fr/en/home) which, in their words, _“have not identified any reason suggesting that the proposed set of methods could not allow to effectively evaluate the extent to which the aforementioned three criteria are fulfilled or not in the context of production and use of synthetic datasets”_. The CNIL also expressed the opinion that the results of Anonymeter (i.e. the three risk scores) **should be used by the data controller to decide whether the residual risks of re-identification are acceptable or not, and whether the dataset could be considered anonymous**.
+
+
+
+## How Anonymeter Works
+
+
+The following sections provide a detailed explanation of how Anonymeter, the main framework of the paper under study, operates. If you want to see the part about my experiments, skip to - [Experiments for Assignment 2 of Data Protection Technologies](#experiments-for-assignment-2-of-data-protection-technologies).
+
 
 
 ## `Anonymeter` in a nutshel
@@ -138,20 +161,108 @@ logger.setLevel(logging.DEBUG)
 ```
 
 
-## Cite this work
+---
+---
 
-If you use anonymeter in your work, we would appreciate citations to the following paper:
+# Experiments for Assignment 2 of Data Protection Technologies
 
-"A Unified Framework for Quantifying Privacy Risk in Synthetic Data", M. Giomi *et al*, PoPETS 2023.
-This `bibtex` entry can be used to refer to the paper:
+From this point forward, this readme will focus on the experiments conducted for Assignment 2 of Data Protection Technologies. 
 
-```text
-@misc{anonymeter,
-  doi = {https://doi.org/10.56553/popets-2023-0055},
-  url = {https://petsymposium.org/popets/2023/popets-2023-0055.php},
-  journal = {Proceedings of Privacy Enhancing Technologies Symposium},
-  year = {2023},
-  author = {Giomi, Matteo and Boenisch, Franziska and Wehmeyer, Christoph and Tasnádi, Borbála},
-  title = {A Unified Framework for Quantifying Privacy Risk in Synthetic Data},
-}
+## Prerequisites
+Ensure you have Python installed. If not, download and install it from the [official website](https://www.python.org/downloads/).
+
+## Installing Dependencies
+To install the required packages and libraries for the experiments, navigate to the repository's root directory and run the following command:
+
+
+``` 
+pip install -r requirements.txt 
 ```
+
+
+## Code Contributions
+
+All the code contributions made by me can be found in the `./src/custom_utility` directory. Navigate there to follow the rest of this README by running the following command in your terminal:
+
+```
+cd ./src/custom_utility
+```
+
+
+
+
+---
+## Reproducing Experiments
+
+All the experiments conducted for this project can be found in the `./src/custom_utility/Utility_vs_Privacy.ipynb` Jupyter Notebook. To reproduce the results, follow these steps:
+
+1. Open the Jupyter Notebook by navigating to the `./src/custom_utility` directory.
+2. Launch Jupyter Notebook using the following command:
+
+```
+jupyter notebook Utility_vs_Privacy.ipynb
+
+```
+
+3. Within the notebook, you'll find detailed explanations and code for each experiment, including data preprocessing, K-anonymization, noise addition, and the evaluation of utility and privacy metrics.
+
+**Note:** Running the Jupyter Notebook is sufficient to reproduce the experiments and view the results. You don't need to run individual modules or scripts separately for reproducing the experiments.
+
+>As a further note, while this README provides an overview of the project, I will also explain other modules and scripts in detail to make everything clearer. This additional information will help you understand the project's structure and the functions of various components.
+
+Feel free to explore the code, modify it as needed, and reproduce the experiments to gain a deeper understanding of the utility-privacy trade-offs in data protection technologies.
+
+
+## K-Anonymization
+
+If you wish to perform K-anonymization on a dataset, you can do so using the `k_anonymize.py` script located in the `./src/custom_utility` directory. To anonymize a dataset, you must provide the following flags:
+
+- `--K`: This flag is compulsory and specifies the value of K for K-anonymization.
+- `--filename`: (Optional) Use this flag to specify the name of the dataset file you want to anonymize. By default, it assumes the data is located in the `root/data` directory.
+- `--pathname`: (Optional) Use this flag to specify the path to your dataset if it's located outside the default directory.
+
+Here's an example of how to run the script for K-anonymization:
+
+```bash
+python ./src/custom_utility/k_anonymize.py --K 5
+--filename adults_syn_ctgan.csv --pathname ../../data/
+```
+
+---
+## Deanonymization:
+
+The `de_anonymize.py` module restores original data with privacy protection intact. Here's how it works:
+
+- Anonymeter framework and RandomForestClassifier require anonymized data to retain original values. `de_anonymize.py` replaces generalized values with the most frequent ones from the original data, making it suitable for models and privacy evaluation while still being anonymized.
+
+- Configure the module in `deanonymization_config.json` to tailor the deanonymization process to your needs.
+
+---
+## Adding Noise
+
+The `add_noise.py` module introduces controlled noise to your data, enhancing privacy while maintaining data utility. Here's how it works:
+
+- You provide a DataFrame to `add_noise.py`, specifying which columns should receive noise and at what level (low, medium, or high).
+
+- For numerical attributes, Gaussian noise with configurable standard deviations (1, 5, or 10) is added. Categorical data is probabilistically modified with chances of 0.05, 0.1, or 0.3.
+
+- The result is a privacy-enhanced dataset with a degree of noise, perfect for protecting sensitive information.
+
+
+## Computing Utility
+
+The `compute_utility.py` module plays a crucial role in assessing the performance of your altered (anonymized or noisy) datasets. Here's how it works:
+
+- You provide an altered dataset to `compute_utility.py`, which can be either anonymized or noisy.
+
+- The module uses a model trained on the original data to evaluate the dataset's performance. Metrics such as accuracy (acc), F1 score (f1), and Receiver Operating Characteristic Area Under Curve (ROC AUC) are computed.
+
+- By comparing these metrics with the results from the original test data, you gain insights into the utility of the transformations. This helps you understand the trade-off between privacy enhancement and data utility.
+
+
+## Thank You!
+
+
+Happy experimenting!
+
+
